@@ -43,3 +43,5 @@ python3 tools/build.py
 ## Publishing and handoff
 
 Apache-2.0. The plugin ID is `network-adb`. See [jxlarrea/kiosk-satellite-plugin-hello-world](https://github.com/jxlarrea/kiosk-satellite-plugin-hello-world) for the SDK 1 documentation this plugin was built against.
+
+Author: David Coulson. Built with AI assistance (Claude Code).
