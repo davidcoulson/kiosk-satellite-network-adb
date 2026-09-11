@@ -23,6 +23,13 @@ import me.jxl.kiosk.plugins.PluginHost;
  * left alone, in-memory tracking only, no cross-restart ownership record
  * (this plugin has no Context and therefore nowhere durable to keep one;
  * see the CPU Performance Mode plugin's identical reasoning for why).
+ *
+ * Also publishes two SDK 1 entities (see AdbEntities): a two-option
+ * select ("Enabled"/"Disabled") standing in for a switch — SDK 1 has no
+ * writable switch entity type — and a read-only binary_sensor reporting
+ * whether ADB is *actually* active right now, distinct from the select's
+ * desired-state value (they can disagree, e.g. while root access is
+ * missing or a change is still propagating).
  */
 public final class NetworkAdbPlugin implements KioskPlugin {
     private static final int PORT = 5555;
@@ -73,7 +80,14 @@ public final class NetworkAdbPlugin implements KioskPlugin {
     }
 
     public void onEvent(String event, Map<String, Object> payload) {
-        // No window, no light — nothing to observe.
+        if (!"select.adb".equals(event)) return;
+        Boolean wantEnabled = AdbEntities.enabledFromOption(payload.get("option"));
+        if (wantEnabled == null) return;
+        submit(() -> {
+            settings.put("enabled", wantEnabled);
+            host.saveSettings(settings);
+            reconcile();
+        });
     }
 
     private boolean simulation() {
@@ -115,6 +129,7 @@ public final class NetworkAdbPlugin implements KioskPlugin {
         }
         if (!rooted) {
             host.status("Root access is required to change ADB state and isn't available on this panel.", true);
+            publishEntities(null);
             return;
         }
         if (wantEnabled) {
@@ -126,6 +141,7 @@ public final class NetworkAdbPlugin implements KioskPlugin {
             if (ok) openedByThisSession = true;
             host.status(ok ? "OK: ADB over TCP on port " + PORT
                 : "Failed to enable ADB — check root access.", !ok);
+            publishEntities(ok ? true : null);
         } else if (openedByThisSession) {
             boolean ok = RootShell.run(
                 "setprop persist.adb.tcp.port \"\" && "
@@ -134,6 +150,7 @@ public final class NetworkAdbPlugin implements KioskPlugin {
                 RootShell.COMMAND_TIMEOUT_MS);
             if (ok) openedByThisSession = false;
             host.status(ok ? "OK: ADB over TCP closed" : "Failed to disable ADB.", !ok);
+            publishEntities(ok ? false : null);
         } else {
             reportStatus();
         }
@@ -143,16 +160,31 @@ public final class NetworkAdbPlugin implements KioskPlugin {
         if (!alive.get()) return;
         if (simulation()) {
             host.status("Simulation mode. No hardware is being changed.", false);
+            publishEntities(openedByThisSession);
             return;
         }
         if (!rooted) {
             host.status("Root access (e.g. via Magisk) is required to enable ADB from here.", true);
+            publishEntities(null);
             return;
         }
         Boolean active = isActive();
         String state = active == null ? "unknown" : (active ? "active" : "off");
         host.status("ADB over TCP: " + state
             + (openedByThisSession ? " (opened by this plugin)" : ""), false);
+        publishEntities(active);
+    }
+
+    /** Publishes the two-option select standing in for a switch (state
+     *  mirrors the "enabled" setting — the desired state), and a
+     *  read-only binary_sensor for [active] — whether ADB is *actually*
+     *  reachable right now, which can lag or disagree with the desired
+     *  state (root missing, a change still propagating, or someone else
+     *  entirely toggling ADB outside this plugin). */
+    private void publishEntities(Boolean active) {
+        host.publishSelect("adb", "Network ADB", AdbEntities.OPTIONS,
+            AdbEntities.selectStateFor(Boolean.TRUE.equals(settings.get("enabled"))));
+        host.publishBinarySensor("adb_active", "ADB over TCP active", "connectivity", active);
     }
 
     private interface Task { void run() throws Exception; }

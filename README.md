@@ -18,6 +18,15 @@ This is ADB over TCP/IP — it works identically whether the panel is on WiFi or
 
 The plugin declares one action, **Check root access and current status**.
 
+## Home Assistant entities
+
+Toggling and monitoring this plugin also works from Home Assistant, not just the plugin subpage:
+
+| Entity | Type | Meaning |
+| --- | --- | --- |
+| Network ADB | select ("Enabled"/"Disabled") | SDK 1 has no writable switch entity type, only select — this two-option select is the closest equivalent, and mirrors the **Enable network ADB** setting. Changing it from Home Assistant applies immediately, same as the on-device toggle. |
+| ADB over TCP active | binary_sensor (`connectivity`) | The *actual* detected state, via the same property/`/proc/net/tcp*` check the plugin subpage uses — not just the desired setting. These can disagree: root missing, a change still propagating, or ADB enabled by something other than this plugin. |
+
 ## Security
 
 Enabling this leaves a standing, unauthenticated ADB port open to anything that can reach the panel on your network. It's opt-in and off by default for exactly that reason — only turn it on for panels you're actively administering, and prefer turning it back off once you're done rather than leaving it on indefinitely.
@@ -38,7 +47,7 @@ python3 tools/test.py
 python3 tools/build.py
 ```
 
-`tools/test.py` runs device-free logic tests: `/proc/net/tcp*` LISTEN-row parsing (including the real IPv6 format captured from a physical panel, not just a synthetic IPv4 fixture) and the property tri-state resolution. `tools/build.py` produces the ZIP, checksum and manifest in `dist/`.
+`tools/test.py` runs device-free logic tests: `/proc/net/tcp*` LISTEN-row parsing (including the real IPv6 format captured from a physical panel, not just a synthetic IPv4 fixture), the property tri-state resolution, and the select-option/enabled-setting mapping in both directions. `tools/build.py` produces the ZIP, checksum and manifest in `dist/`.
 
 ## Publishing and handoff
 
