@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.0
+
+- Replace the two-option select workaround with a real Home Assistant `switch`, now that upstream shipped writable switches ("Add SDK 1 writable plugin switches" in jxlarrea/kiosk-satellite, resolving [the feature request](https://github.com/jxlarrea/kiosk-satellite-plugin-hello-world/issues/3) filed for exactly this). Commands arrive as `switch.adb` with `{on: boolean}`. Removes `AdbEntities` and its test — the workaround's string↔boolean mapping has no remaining purpose.
+- Breaking for Home Assistant: the entity changes type from `select` to `switch`, so any automation or dashboard card referencing the old select entity needs updating.
+
 ## 0.2.0
 
 - Publish a Home Assistant select entity ("Enabled"/"Disabled") standing in for a switch — SDK 1 has no writable switch entity type, only select — that mirrors and controls the **Enable network ADB** setting. Publish a read-only `adb_active` binary_sensor for the actually-detected state, which can disagree with the desired setting (root missing, a change still propagating, or ADB enabled by something else). Declares the `entities` capability.

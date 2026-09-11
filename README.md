@@ -24,7 +24,7 @@ Toggling and monitoring this plugin also works from Home Assistant, not just the
 
 | Entity | Type | Meaning |
 | --- | --- | --- |
-| Network ADB | select ("Enabled"/"Disabled") | SDK 1 has no writable switch entity type, only select — this two-option select is the closest equivalent, and mirrors the **Enable network ADB** setting. Changing it from Home Assistant applies immediately, same as the on-device toggle. |
+| Network ADB | switch | Mirrors the **Enable network ADB** setting. Toggling it from Home Assistant applies immediately, same as the on-device toggle. (0.2.0 shipped this as a two-option select workaround, because SDK 1 had no writable switch type at the time; upstream added one, so it's a real switch as of 0.3.0.) |
 | ADB over TCP active | binary_sensor (`connectivity`) | The *actual* detected state, via the same property/`/proc/net/tcp*` check the plugin subpage uses — not just the desired setting. These can disagree: root missing, a change still propagating, or ADB enabled by something other than this plugin. |
 
 ## Security
@@ -47,7 +47,7 @@ python3 tools/test.py
 python3 tools/build.py
 ```
 
-`tools/test.py` runs device-free logic tests: `/proc/net/tcp*` LISTEN-row parsing (including the real IPv6 format captured from a physical panel, not just a synthetic IPv4 fixture), the property tri-state resolution, and the select-option/enabled-setting mapping in both directions. `tools/build.py` produces the ZIP, checksum and manifest in `dist/`.
+`tools/test.py` runs device-free logic tests: `/proc/net/tcp*` LISTEN-row parsing (including the real IPv6 format captured from a physical panel, not just a synthetic IPv4 fixture), and the property tri-state resolution. `tools/build.py` produces the ZIP, checksum and manifest in `dist/`.
 
 ## Publishing and handoff
 

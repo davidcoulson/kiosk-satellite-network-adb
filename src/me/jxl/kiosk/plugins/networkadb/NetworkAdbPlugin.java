@@ -22,14 +22,16 @@ import me.jxl.kiosk.plugins.PluginHost;
  * externally-enabled ADB port (a technician's manual `adb tcpip 5555`) is
  * left alone, in-memory tracking only, no cross-restart ownership record
  * (this plugin has no Context and therefore nowhere durable to keep one;
- * see the CPU Performance Mode plugin's identical reasoning for why).
+ * see the Device Performance plugin's identical reasoning for why).
  *
- * Also publishes two SDK 1 entities (see AdbEntities): a two-option
- * select ("Enabled"/"Disabled") standing in for a switch — SDK 1 has no
- * writable switch entity type — and a read-only binary_sensor reporting
- * whether ADB is *actually* active right now, distinct from the select's
- * desired-state value (they can disagree, e.g. while root access is
- * missing or a change is still propagating).
+ * Publishes two SDK 1 entities: a writable {@code switch} mirroring and
+ * controlling the "enabled" setting, and a read-only {@code binary_sensor}
+ * reporting whether ADB is *actually* active right now. These are
+ * deliberately separate — they can genuinely disagree (root missing, a
+ * change still propagating, or ADB enabled by something other than this
+ * plugin). 0.2.0 shipped the switch as a two-option select workaround
+ * because SDK 1 had no writable switch type; upstream added one in "Add
+ * SDK 1 writable plugin switches", so this is a real switch now.
  */
 public final class NetworkAdbPlugin implements KioskPlugin {
     private static final int PORT = 5555;
@@ -80,9 +82,13 @@ public final class NetworkAdbPlugin implements KioskPlugin {
     }
 
     public void onEvent(String event, Map<String, Object> payload) {
-        if (!"select.adb".equals(event)) return;
-        Boolean wantEnabled = AdbEntities.enabledFromOption(payload.get("option"));
-        if (wantEnabled == null) return;
+        if (!"switch.adb".equals(event)) return;
+        // The host already validates this is a boolean before delivering it;
+        // re-check anyway rather than silently defaulting a malformed command
+        // to either state — turning ADB on by accident is the bad direction.
+        Object on = payload.get("on");
+        if (!(on instanceof Boolean)) return;
+        boolean wantEnabled = (Boolean) on;
         submit(() -> {
             settings.put("enabled", wantEnabled);
             host.saveSettings(settings);
@@ -182,8 +188,7 @@ public final class NetworkAdbPlugin implements KioskPlugin {
      *  state (root missing, a change still propagating, or someone else
      *  entirely toggling ADB outside this plugin). */
     private void publishEntities(Boolean active) {
-        host.publishSelect("adb", "Network ADB", AdbEntities.OPTIONS,
-            AdbEntities.selectStateFor(Boolean.TRUE.equals(settings.get("enabled"))));
+        host.publishSwitch("adb", "Network ADB", Boolean.TRUE.equals(settings.get("enabled")));
         host.publishBinarySensor("adb_active", "ADB over TCP active", "connectivity", active);
     }
 
