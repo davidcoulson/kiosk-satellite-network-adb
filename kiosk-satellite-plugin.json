@@ -3,7 +3,7 @@
   "apiVersion": 1,
   "id": "network-adb",
   "name": "Network ADB",
-  "version": "2026.09.11.01",
+  "version": "0.1.1-20260911",
   "minAndroidSdk": 24,
   "entryClass": "me.jxl.kiosk.plugins.networkadb.NetworkAdbPlugin",
   "description": "Keep ADB over TCP (port 5555) on, reasserting it at every app start on panels whose firmware strips persist.adb.tcp.port at boot. Works over WiFi or Ethernet — this is ADB over TCP/IP, not tied to a particular physical layer. Requires root. Leaves a standing ADB port open on the LAN while enabled.",
