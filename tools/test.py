@@ -22,5 +22,6 @@ sources = [
 with tempfile.TemporaryDirectory(prefix='network-adb-test-') as directory:
     subprocess.run([tool('javac'), '--release', '8', '-d', directory, *map(str, sources)], check=True)
     subprocess.run([tool('java'), '-ea', '-cp', directory, 'AdbMathTest'], check=True)
+    subprocess.run([tool('java'), '-ea', '-cp', directory, 'ManifestContractTest'], check=True)
 
 subprocess.run([sys.executable, str(root / 'tools/test_android_sdk.py')], check=True)
