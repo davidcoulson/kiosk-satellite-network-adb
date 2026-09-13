@@ -41,7 +41,7 @@ public final class NetworkAdbPlugin implements KioskPlugin {
     private ExecutorService worker;
     private Map<String, Object> settings = new HashMap<>();
 
-    private volatile boolean rooted;
+    private volatile boolean privileged;
     private Boolean lastSimulation;
     // In-memory only: true once THIS session's own apply() has turned ADB
     // on. Only this plugin's own opened port ever gets closed by it.
@@ -49,6 +49,7 @@ public final class NetworkAdbPlugin implements KioskPlugin {
 
     public void start(PluginHost host, Map<String, Object> settings) {
         this.host = host;
+        PrivilegedShell.attach(host);
         alive.set(true);
         worker = Executors.newSingleThreadExecutor(r -> {
             Thread t = new Thread(r, "network-adb");
@@ -100,8 +101,16 @@ public final class NetworkAdbPlugin implements KioskPlugin {
         return Boolean.TRUE.equals(settings.get("simulation"));
     }
 
+    /** Simulation never touches a channel at all; otherwise this asks
+     *  which one is live right now, since Shizuku can be started or
+     *  authorized while the plugin is already running. */
     private void detect() {
-        rooted = simulation() || RootShell.isRooted();
+        if (simulation()) {
+            privileged = true;
+            return;
+        }
+        PrivilegedShell.detect();
+        privileged = PrivilegedShell.available();
     }
 
     /** True/false/null (unknown) — never assumed false just because a read
@@ -133,23 +142,26 @@ public final class NetworkAdbPlugin implements KioskPlugin {
             reportStatus();
             return;
         }
-        if (!rooted) {
-            host.status("Root access is required to change ADB state and isn't available on this panel.", true);
+        if (!privileged) {
+            host.status("Root or Shizuku access is required to change ADB state, "
+                + "and neither is available on this panel.", true);
             publishEntities(null);
             return;
         }
         if (wantEnabled) {
-            boolean ok = RootShell.run(
+            boolean ok = PrivilegedShell.run(
                 "setprop persist.adb.tcp.port " + PORT + " && "
                     + "setprop service.adb.tcp.port " + PORT + " && "
                     + "setprop ctl.restart adbd",
                 RootShell.COMMAND_TIMEOUT_MS);
             if (ok) openedByThisSession = true;
             host.status(ok ? "OK: ADB over TCP on port " + PORT
-                : "Failed to enable ADB — check root access.", !ok);
+                    + " (via " + PrivilegedShell.describe() + ")"
+                : "Failed to enable ADB via " + PrivilegedShell.describe()
+                    + ". Setting the ADB properties may need root on this panel.", !ok);
             publishEntities(ok ? true : null);
         } else if (openedByThisSession) {
-            boolean ok = RootShell.run(
+            boolean ok = PrivilegedShell.run(
                 "setprop persist.adb.tcp.port \"\" && "
                     + "setprop service.adb.tcp.port \"\" && "
                     + "setprop ctl.restart adbd",
@@ -169,15 +181,17 @@ public final class NetworkAdbPlugin implements KioskPlugin {
             publishEntities(openedByThisSession);
             return;
         }
-        if (!rooted) {
-            host.status("Root access (e.g. via Magisk) is required to enable ADB from here.", true);
+        if (!privileged) {
+            host.status("Root (e.g. via Magisk) or Shizuku access is required to enable ADB "
+                + "from here.", true);
             publishEntities(null);
             return;
         }
         Boolean active = isActive();
         String state = active == null ? "unknown" : (active ? "active" : "off");
         host.status("ADB over TCP: " + state
-            + (openedByThisSession ? " (opened by this plugin)" : ""), false);
+            + (openedByThisSession ? " (opened by this plugin)" : "")
+            + " · via " + PrivilegedShell.describe(), false);
         publishEntities(active);
     }
 
@@ -213,16 +227,17 @@ public final class NetworkAdbPlugin implements KioskPlugin {
         // Close only what this plugin itself opened, same rule as a live
         // toggle-off — disabling or uninstalling this plugin must not
         // strand a technician's own manually-enabled ADB port closed.
-        if (rooted && !simulation() && openedByThisSession) {
-            RootShell.run(
+        if (privileged && !simulation() && openedByThisSession) {
+            PrivilegedShell.run(
                 "setprop persist.adb.tcp.port \"\" && "
                     + "setprop service.adb.tcp.port \"\" && "
                     + "setprop ctl.restart adbd",
                 RootShell.COMMAND_TIMEOUT_MS);
         }
-            // Last, so anything above still has a shell to run in: ends
-        // the persistent root session rather than leaving a root
-        // shell alive for a plugin that is no longer running.
-        RootShell.shutdown();
+        // Last, so anything above still has a shell to run in: ends the
+        // persistent root session and forgets the channel rather than
+        // leaving a root shell alive for a plugin that is no longer
+        // running.
+        PrivilegedShell.detach();
 }
 }

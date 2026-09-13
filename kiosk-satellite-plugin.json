@@ -3,21 +3,22 @@
   "apiVersion": 1,
   "id": "network-adb",
   "name": "Network ADB",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "minAndroidSdk": 24,
   "entryClass": "me.jxl.kiosk.plugins.networkadb.NetworkAdbPlugin",
-  "description": "Keep ADB over TCP (port 5555) on, reasserting it at every app start on panels whose firmware strips persist.adb.tcp.port at boot. Works over WiFi or Ethernet — this is ADB over TCP/IP, not tied to a particular physical layer. Requires root. Leaves a standing ADB port open on the LAN while enabled. Exposes a Home Assistant switch and an active-state sensor.",
+  "description": "Keep ADB over TCP (port 5555) on, reasserting it at every app start on panels whose firmware strips persist.adb.tcp.port at boot. Works over WiFi or Ethernet \u2014 this is ADB over TCP/IP, not tied to a particular physical layer. Needs root, or Shizuku where the panel's firmware lets the Shizuku server set the ADB properties. Leaves a standing ADB port open on the LAN while enabled. Exposes a Home Assistant switch and an active-state sensor.",
   "author": "David Coulson",
   "license": "Apache-2.0",
   "capabilities": [
-    "entities"
+    "entities",
+    "shizuku"
   ],
   "settings": [
     {
       "key": "enabled",
       "type": "boolean",
       "title": "Enable network ADB",
-      "description": "Opens ADB over TCP on port 5555, over whichever network the panel is on (WiFi or Ethernet). Reapplied automatically at every app start, in case the panel's firmware reset it. Turning this off only closes the port if this plugin was the one that opened it in the current session — an ADB port someone else enabled is left alone.",
+      "description": "Opens ADB over TCP on port 5555, over whichever network the panel is on (WiFi or Ethernet). Reapplied automatically at every app start, in case the panel's firmware reset it. Turning this off only closes the port if this plugin was the one that opened it in the current session \u2014 an ADB port someone else enabled is left alone.",
       "default": false,
       "group": "ADB"
     },

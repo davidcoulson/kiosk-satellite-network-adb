@@ -7,7 +7,7 @@ This is ADB over TCP/IP — it works identically whether the panel is on WiFi or
 ## Requirements
 
 - Kiosk Satellite with **plugin SDK 1 support**.
-- Root (e.g. Magisk) to actually open or close the port. Checking whether ADB is currently active needs no root at all — `getprop` and `/proc/net/tcp*` are both ordinarily app-readable.
+- Root (e.g. Magisk), or Shizuku, to actually open or close the port. Root is used when it is available; Shizuku is the fallback, and matters because `su` is granted per app UID — reinstalling Kiosk Satellite gives it a new UID and silently invalidates an existing Magisk grant, while Shizuku's authorization is held against the KS package and survives. Note that a Shizuku server started from ADB runs as shell rather than root, and some firmwares will not let shell set the ADB properties; the plugin's status line names the channel it used so a refusal is diagnosable. Checking whether ADB is currently active needs neither — `getprop` and `/proc/net/tcp*` are both ordinarily app-readable.
 
 ## Install and use
 
@@ -16,7 +16,7 @@ This is ADB over TCP/IP — it works identically whether the panel is on WiFi or
 3. Enable **Network ADB** on its entry row and open the subpage.
 4. Turn on **Enable network ADB**. It reasserts itself automatically at every future app start — no need to touch it again unless you want it off.
 
-The plugin declares one action, **Check root access and current status**.
+The plugin declares one action, **Check root access and current status**. It re-checks which privileged channel is live, which is worth running after starting or authorizing Shizuku, since that can happen while the plugin is already running.
 
 ## Home Assistant entities
 

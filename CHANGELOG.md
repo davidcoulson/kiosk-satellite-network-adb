@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.0
+
+- **Falls back to Shizuku when direct root is unavailable.** Declares the `shizuku` capability and runs its property writes through the host's Shizuku channel when `su` will not start. Root is still tried first and still preferred: the persistent session costs one grant for the plugin's lifetime, where every Shizuku call is a fresh binder round trip.
+- This exists because `su` is granted per app UID. Reinstalling Kiosk Satellite gives it a new UID, so a Magisk grant made beforehand silently stops applying and the plugin reports "root isn't available" on a demonstrably rooted panel. Shizuku's authorization is held against the KS package instead, so it survives the reinstall that breaks the root grant.
+- The privilege gap is surfaced rather than hidden: a Shizuku server started from ADB runs as shell (UID 2000), and setting the ADB properties may need root on a given firmware. The status line now names the channel — `root`, `Shizuku (root)` or `Shizuku (shell)` — and a refusal is reported as a failed command rather than a mysterious no-op.
+- Status and error text no longer claim root specifically where Shizuku would do.
+- Tested against fake hosts with no root, no Shizuku and no device: ungranted and pre-capability hosts are treated as "no channel", and a non-zero exit or a host-side timeout is reported as failure rather than as an empty success.
+
 ## 0.4.0
 
 - **One root shell per plugin instead of one per command.** Every root call used to spawn a fresh `su`, and Magisk shows its "granted Superuser rights" toast per request. The plugin now holds a single `su` session and writes commands to its stdin, so root is granted once per plugin start.
