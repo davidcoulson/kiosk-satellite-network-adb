@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Plugin 0.5.1: adds an icon for Community Plugins and Browse plugins.
+
 ## 0.5.0
 
 - **Falls back to Shizuku when direct root is unavailable.** Declares the `shizuku` capability and runs its property writes through the host's Shizuku channel when `su` will not start. Root is still tried first and still preferred: the persistent session costs one grant for the plugin's lifetime, where every Shizuku call is a fresh binder round trip.
